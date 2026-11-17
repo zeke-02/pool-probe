@@ -49,6 +49,7 @@ containers:
     volumes:
       - harness-blobs:/harness-blobs
       - sockets:/sockets
+      - jobs:/jobs # the supervisor's --jobs folder; the CVM's disk is memory-backed
 
 shim:
   upstream-port: 7400
