@@ -20,7 +20,7 @@ networks:
 
 containers:
   - name: broker
-    image: "ghcr.io/zeke-02/pool-probe/broker@sha256:PLACEHOLDER_BROKER" # from Build Image
+    image: "ghcr.io/zeke-02/pool-probe/broker@sha256:94537ab2599c1e64c56f203c81a2164b96dd611561ddb08ba17d022a609834aa" # from Build Image
     networks: [broker-out]
     keys: [fount-link]
     attestation: true
@@ -30,7 +30,7 @@ containers:
       - harness-blobs:/harness-blobs
       - sockets:/sockets
     env:
-      - FOUNT_HARNESS_IMAGE: "ghcr.io/zeke-02/fount-runner@sha256:PLACEHOLDER_HARNESS"
+      - FOUNT_HARNESS_IMAGE: "ghcr.io/zeke-02/fount-runner@sha256:dfff8057537c386f06aba38e58a8ec48f2ce8a54d20a1e5780b7d6f7e5afdeb4"
     secrets:
       - FOUNT_BROKER_REGISTRY_TOKEN
     healthcheck:
@@ -41,11 +41,11 @@ containers:
       start_period: 1m
 
   - name: supervisor
-    image: "ghcr.io/zeke-02/pool-probe/supervisor@sha256:PLACEHOLDER_SUPERVISOR" # from Build Image
+    image: "ghcr.io/zeke-02/pool-probe/supervisor@sha256:7f9d6c7c2ccca7fd90bf73d24020ab1d9beebf38979abf7c2f0fffb75d2c7c6a" # from Build Image
     cvm_admin: true
     networks: []
     restart: always
-    command: ["serve", "--image", "sha256:PLACEHOLDER_HARNESS"]
+    command: ["serve", "--image", "sha256:dfff8057537c386f06aba38e58a8ec48f2ce8a54d20a1e5780b7d6f7e5afdeb4"]
     volumes:
       - harness-blobs:/harness-blobs
       - sockets:/sockets
