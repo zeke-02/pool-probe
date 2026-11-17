@@ -1,0 +1,60 @@
+# Builds the broker and supervisor images and pushes them to GHCR. Pin the reported digests in
+# tinfoil-config.yml before running Tinfoil Release.
+
+name: Build Image
+
+run-name: Build images ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image version (e.g. v0.0.1)"
+        required: true
+        type: string
+
+concurrency:
+  group: pool-probe-image-${{ inputs.version }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        target: [broker, supervisor]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        env:
+          SOURCE_DATE_EPOCH: 0
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.target }}:${{ inputs.version }}
+
+      - name: Report image digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ghcr.io/${{ github.repository }}/${{ matrix.target }}
+        run: printf 'Image: %s@%s\n' "$IMAGE" "$DIGEST" | tee -a "$GITHUB_STEP_SUMMARY"

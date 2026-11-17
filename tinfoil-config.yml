@@ -1,0 +1,58 @@
+# Throwaway probe of Fount Cloud's runner enclave (fount m4-cloud-runners.md §5.1c, the
+# "still to prove in an enclave" list). The broker pulls the private harness image with a
+# read-only token, the cvm_admin supervisor unpacks it and runs each job under runsc. A dev
+# coordinator on a laptop sends jobs over the link, unattested at both ends: the attested link
+# was proven by link-probe, and this probe is about the sandbox, memory and boot.
+cvm-version: 0.14.17 # https://github.com/tinfoilsh/cvmimage/releases/latest, no `v`
+cpus: 8
+memory: 32768
+
+attested-keys:
+  - id: fount-link
+    key: ed25519
+
+networks:
+  broker-out:
+    egress: allowlist
+    allow:
+      - ghcr.io
+      - pkg-containers.githubusercontent.com
+
+containers:
+  - name: broker
+    image: "ghcr.io/zeke-02/pool-probe/broker@sha256:PLACEHOLDER_BROKER" # from Build Image
+    networks: [broker-out]
+    keys: [fount-link]
+    attestation: true
+    restart: always
+    command: ["runner", "--listen", "0.0.0.0:7400", "--coordinator-repo", "unattested"]
+    volumes:
+      - harness-blobs:/harness-blobs
+      - sockets:/sockets
+    env:
+      - FOUNT_HARNESS_IMAGE: "ghcr.io/zeke-02/fount-runner@sha256:PLACEHOLDER_HARNESS"
+    secrets:
+      - FOUNT_BROKER_REGISTRY_TOKEN
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:7400/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 1m
+
+  - name: supervisor
+    image: "ghcr.io/zeke-02/pool-probe/supervisor@sha256:PLACEHOLDER_SUPERVISOR" # from Build Image
+    cvm_admin: true
+    networks: []
+    restart: always
+    command: ["serve", "--image", "sha256:PLACEHOLDER_HARNESS"]
+    volumes:
+      - harness-blobs:/harness-blobs
+      - sockets:/sockets
+
+shim:
+  upstream-port: 7400
+  upstream-container: broker
+  paths:
+    - /health
+    - /fount-link
