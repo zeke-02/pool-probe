@@ -38,7 +38,7 @@ containers:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 1m
+      start_period: 10m # the broker pulls the harness (~610 MB) before it listens
 
   - name: supervisor
     image: "ghcr.io/zeke-02/pool-probe/supervisor@sha256:7f9d6c7c2ccca7fd90bf73d24020ab1d9beebf38979abf7c2f0fffb75d2c7c6a" # from Build Image
