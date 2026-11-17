@@ -57,4 +57,5 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           IMAGE: ghcr.io/${{ github.repository }}/${{ matrix.target }}
-        run: printf 'Image: %s@%s\n' "$IMAGE" "$DIGEST" | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          printf 'Image: %s@%s\n' "$IMAGE" "$DIGEST" | tee -a "$GITHUB_STEP_SUMMARY"
