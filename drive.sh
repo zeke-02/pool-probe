@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Feeds a deployed pool-probe enclave from this machine: a dev fount-coordinator dials the runner's
 # link (unattested at both ends) and sends the runner smoke jobs one at a time, then PDF jobs 4 and
-# 8 at once on separate workers. Every job's exit, time, memory peak and OOM kills are in the
+# 8 at once on separate workers of one account (BURSTS_ONLY=1 skips the smoke jobs). Every job's exit, time, memory peak and OOM kills are in the
 # coordinator's log, which this prints at the end.
 #
 #   RUNNER=https://<domain> drive.sh
@@ -61,10 +61,12 @@ run() {
   job=$(enqueue "$W" "$1")
   state=$(wait_job "$job")
   echo "$1: $(( $(date +%s) - started ))s wall, $(echo "$state" | python3 -c 'import json,sys; j=json.load(sys.stdin); print(j.get("state"), j.get("error",""))')"
+  case "$state" in *'"state":"finished"'*) ;; *) FAIL=1 ;; esac
   shift
   local t; for t in "$@"; do said "$W" "$t" || FAIL=1; done
 }
 
+if [ -z "${BURSTS_ONLY:-}" ]; then
 echo "== the nine smoke jobs, one at a time"
 run write-job.json
 run python-job.json 'rows: 5'
@@ -85,14 +87,21 @@ putText "$W" part.typ $'The quarterly total was 200.\n'
 run typst-notebook-job.json 'Quarterly check' 'Compilation successful' 'Pages: 2'
 putText "$W" mail/governance.md $'# Governance\n\nThe directors convene on the first Tuesday of each quarter, at 9am in Room 4.\n'
 run search-job.json '/work/mail/governance.md'
+fi
 
-# burst <n>: n workers, one PDF job each, all at once.
+# burst <n>: n workers of one account, one PDF job each, all at once. One account, because the
+# pool gives a runner to one account at a time: workers of n accounts would queue for the one runner.
 burst() {
   local n=$1 i w ws=() jobs=() started
-  for i in $(seq 1 "$n"); do w=$(worker "burst${n}_$i"); ws+=("$w"); put "$w" "$ROOT/e2e/fixtures/runner-memo.pdf" runner-memo.pdf; done
+  for i in $(seq 1 "$n"); do w=$(worker "burst$n"); ws+=("$w"); put "$w" "$ROOT/e2e/fixtures/runner-memo.pdf" runner-memo.pdf; done
   started=$(date +%s)
   for w in "${ws[@]}"; do jobs+=("$(enqueue "$w" pdf-job.json)"); done
-  for j in "${jobs[@]}"; do echo "  $(wait_job "$j" | python3 -c 'import json,sys; j=json.load(sys.stdin); print(j.get("state"), j.get("error",""))')"; done
+  local state
+  for j in "${jobs[@]}"; do
+    state=$(wait_job "$j")
+    echo "  $(echo "$state" | python3 -c 'import json,sys; j=json.load(sys.stdin); print(j.get("state"), j.get("error",""))')"
+    case "$state" in *'"state":"finished"'*) ;; *) FAIL=1 ;; esac
+  done
   echo "$n PDF jobs at once: $(( $(date +%s) - started ))s wall"
 }
 echo "== PDF jobs at once"
