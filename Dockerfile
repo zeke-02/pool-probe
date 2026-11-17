@@ -3,7 +3,7 @@
 # unattested coordinator) and fount-supervisor with gVisor, both from one pinned fount-broker
 # commit. The digests that get measured come from Build Image.
 FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS build
-ARG BROKER_REV=396736a1dff20cf3b322ad40827ac68887d7ce67
+ARG BROKER_REV=e46a0381a94d90ec7ed7a307cc88271554501d64
 ADD --keep-git-dir=false https://github.com/fount-labs/fount-broker.git#${BROKER_REV} /src
 WORKDIR /src
 ENV CGO_ENABLED=0 GOFLAGS=-trimpath GOTOOLCHAIN=local
